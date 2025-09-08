@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <title>ZIP ⇄ EPUB Converter</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- Bootstrap -->
+<!-- Bootstrap 5 -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<!-- JS dependencies -->
+<!-- JS libraries -->
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <style>
@@ -23,7 +23,6 @@ body{padding-top:3rem}
     <div class="btn-group" role="group">
       <input type="radio" class="btn-check" name="mode" id="modeZip2Epub" autocomplete="off" checked>
       <label class="btn btn-outline-primary" for="modeZip2Epub">ZIP → EPUB</label>
-
       <input type="radio" class="btn-check" name="mode" id="modeEpub2Zip" autocomplete="off">
       <label class="btn btn-outline-primary" for="modeEpub2Zip">EPUB → ZIP</label>
     </div>
@@ -65,7 +64,13 @@ body{padding-top:3rem}
     <div class="card mb-3">
       <div class="card-body">
         <label class="form-label">EPUB file</label>
-        <input id="epubFile" type="file" accept=".epub" class="form-control" required>
+        <input id="epubFile" type="file" accept=".epub" class="form-control mb-3" required>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="titleFilenames">
+          <label class="form-check-label" for="titleFilenames">
+            Use chapter titles as TXT filenames
+          </label>
+        </div>
       </div>
     </div>
     <button id="extractZipBtn" class="btn btn-primary w-100 mb-3">Extract to ZIP</button>
@@ -75,18 +80,21 @@ body{padding-top:3rem}
 </div>
 
 <script>
-// ——— Helpers ———
+//— helpers —
 const naturalSort=(a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
 const show=(el,yes)=>el.style.display=yes?"":"none";
+const sanitize=s=>s.replace(/[\\/:*?"<>|]/g,"").trim().slice(0,60)||"chapter";
 function txtFromXhtml(xml){
-  // remove tags, preserve <p> as line breaks
-  return xml.replace(/<p[^>]*>/gi,"").replace(/<\/p>/gi,"\n")
-            .replace(/<br ?\/?>/gi,"\n").replace(/<[^>]+>/g,"")
-            .replace(/\r?\n\s*\r?\n/g,"\n").trim();
+  return xml.replace(/<p[^>]*>/gi,"")
+            .replace(/<\/p>/gi,"\n")
+            .replace(/<br ?\/?>/gi,"\n")
+            .replace(/<[^>]+>/g,"")
+            .replace(/\r?\n\s*\r?\n/g,"\n")
+            .trim();
 }
 
-// ——— EPUB builder (ZIP → EPUB) ———
-async function buildEPUB(meta,chapters,coverBlob){
+//— EPUB builder (ZIP → EPUB) —
+async function buildEPUB(meta,chapters,cover){
   const zip=new JSZip();
   zip.file("mimetype","application/epub+zip",{compression:"STORE"});
   zip.folder("META-INF").file("container.xml",
@@ -94,31 +102,28 @@ async function buildEPUB(meta,chapters,coverBlob){
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
  <rootfiles><rootfile full-path="OEBPS/package.opf" media-type="application/oebps-package+xml"/></rootfiles>
 </container>`);
-
   const oebps=zip.folder("OEBPS");
   oebps.file("style.css","body{font-family:serif;line-height:1.4;margin:5%;}");
-
   const manifest=[],spine=[];
   let i=1;
   for(const ch of chapters){
     const id=`c${i++}`;
-    const xhtml=
+    oebps.file(`${id}.xhtml`,
 `<?xml version="1.0"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><title>${ch.title}</title><link rel="stylesheet" href="style.css"/></head>
 <body><h2>${ch.title}</h2>
 ${ch.paragraphs.map(p=>`<p>${p}<br/></p>`).join("\n")}
-</body></html>`;
-    oebps.file(`${id}.xhtml`,xhtml);
+</body></html>`);
     manifest.push({id,href:`${id}.xhtml`,type:"application/xhtml+xml"});
     spine.push(id);
   }
-  if(coverBlob){
-    oebps.file("cover.jpg",coverBlob);
-    manifest.push({id:"cover",href:"cover.jpg",type:coverBlob.type});
+  if(cover){
+    oebps.file("cover.jpg",cover);
+    manifest.push({id:"cover",href:"cover.jpg",type:cover.type});
   }
-  const now=new Date().toISOString().split("T")[0];
+  const today=new Date().toISOString().split("T")[0];
   oebps.file("package.opf",
 `<?xml version="1.0"?>
 <package version="3.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid">
@@ -127,7 +132,7 @@ ${ch.paragraphs.map(p=>`<p>${p}<br/></p>`).join("\n")}
   <dc:title>${meta.title}</dc:title>
   ${meta.author?`<dc:creator>${meta.author}</dc:creator>`:""}
   ${meta.desc?`<dc:description>${meta.desc}</dc:description>`:""}
-  <dc:date>${now}</dc:date>
+  <dc:date>${today}</dc:date>
  </metadata>
  <manifest>
   ${manifest.map(m=>`<item id="${m.id}" href="${m.href}" media-type="${m.type}"/>`).join("\n  ")}
@@ -140,47 +145,38 @@ ${ch.paragraphs.map(p=>`<p>${p}<br/></p>`).join("\n")}
   return zip.generateAsync({type:"blob",mimeType:"application/epub+zip"});
 }
 
-// ——— EPUB extractor (EPUB → ZIP) ———
-async function epubToZip(epubBlob){
+//— EPUB → ZIP extractor —
+async function epubToZip(epubBlob,useTitles){
   const inZip=await JSZip.loadAsync(epubBlob);
-  // find package.opf
   const container=await inZip.file("META-INF/container.xml").async("string");
   const opfPath=container.match(/full-path="([^"]+)"/)[1];
   const opf=await inZip.file(opfPath).async("string");
 
-  // simple parser via RegExp (good enough for majority of EPUBs)
   const getAll=(re)=>[...opf.matchAll(re)].map(m=>m[1]);
-  const titles=getAll(/<dc:title[^>]*>([^<]+)/g);
-  const authors=getAll(/<dc:creator[^>]*>([^<]+)/g);
-  const descs=getAll(/<dc:description[^>]*>([^<]+)/g);
-  const manifestEntries=Object.fromEntries(
+  const spine=[...opf.matchAll(/<itemref[^>]+idref="([^"]+)"/g)].map(m=>m[1]);
+  const manifest=Object.fromEntries(
     [...opf.matchAll(/<item\s+id="([^"]+)"\s+href="([^"]+)"[^>]*media-type="application\/xhtml\+xml"[^>]*>/g)]
     .map(m=>[m[1],m[2]]));
-  const spineIds=[...opf.matchAll(/<itemref[^>]+idref="([^"]+)"/g)].map(m=>m[1]);
+  const chapterTitles=getAll(/<dc:title[^>]*>([^<]+)/g);
 
-  // build txt files following spine order
-  const out=new JSZip();
-  let chapterNum=1;
-  for(const id of spineIds){
-    const href=manifestEntries[id];
-    if(!href)continue;
+  const out=new JSZip(); let n=1;
+  for(const id of spine){
+    const href=manifest[id]; if(!href)continue;
     const full=opfPath.replace(/[^/]+$/,"")+href;
     const xhtml=await inZip.file(full).async("string");
     const txt=txtFromXhtml(xhtml);
-    out.file(String(chapterNum).padStart(3,"0")+".txt",txt);
-    chapterNum++;
+    const fname=useTitles?sanitize((/<title>([^<]+)<\/title>/i.exec(xhtml)||[])[1]||`chapter${n}`)
+                         :String(n).padStart(3,"0");
+    out.file(`${fname}.txt`,txt); n++;
   }
-
-  // metadata file
   out.file("metadata.txt",
-`Title: ${titles[0]||""}
-Author: ${authors[0]||""}
-Description: ${descs[0]||""}
-`);
+`Title: ${chapterTitles[0]||""}
+Author: ${(getAll(/<dc:creator[^>]*>([^<]+)/g)[0]||"")}
+Description: ${(getAll(/<dc:description[^>]*>([^<]+)/g)[0]||"")}`);
   return out.generateAsync({type:"blob"});
 }
 
-// ——— UI wiring ———
+//— UI wiring —
 const panelZip2Epub=document.getElementById("panelZip2Epub");
 const panelEpub2Zip=document.getElementById("panelEpub2Zip");
 document.querySelectorAll('input[name="mode"]').forEach(r=>{
@@ -194,21 +190,19 @@ document.getElementById("createEpubBtn").addEventListener("click",async()=>{
   const title=document.getElementById("bookTitle").value.trim();
   const zipFile=document.getElementById("zipFile").files[0];
   if(!title||!zipFile){alert("Fill Title and choose ZIP");return;}
-
   show(progress,true);
   try{
-    const zip=await JSZip.loadAsync(zipFile);
-    const txts=Object.values(zip.files).filter(f=>!f.dir&&/\.txt$/i.test(f.name)).sort(naturalSort);
+    const z=await JSZip.loadAsync(zipFile);
+    const txts=Object.values(z.files).filter(f=>!f.dir&&/\.txt$/i.test(f.name)).sort(naturalSort);
     if(!txts.length)throw new Error("ZIP has no .txt files");
     const chapters=[];
     for(const f of txts){
       const lines=(await f.async("string")).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
       chapters.push({title:f.name.replace(/\.txt$/i,""),paragraphs:lines});
     }
-    const cover=document.getElementById("coverFile").files[0]||null;
     const epub=await buildEPUB(
       {title,author:document.getElementById("bookAuthor").value.trim(),desc:document.getElementById("bookDesc").value.trim()},
-      chapters,cover);
+      chapters,document.getElementById("coverFile").files[0]||null);
     saveAs(epub,`${title.replace(/\s+/g,"_")}.epub`);
   }catch(e){alert(e.message);}finally{show(progress,false);}
 });
@@ -218,9 +212,9 @@ document.getElementById("extractZipBtn").addEventListener("click",async()=>{
   if(!epub){alert("Choose an EPUB");return;}
   show(progress,true);
   try{
-    const zipBlob=await epubToZip(epub);
+    const zipBlob=await epubToZip(epub,document.getElementById("titleFilenames").checked);
     saveAs(zipBlob,"chapters.zip");
-  }catch(e){alert("Error: "+e.message);}finally{show(progress,false);}
+  }catch(e){alert(e.message);}finally{show(progress,false);}
 });
 </script>
 </body>
