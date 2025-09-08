@@ -1,157 +1,156 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
 <head>
-<meta charset="UTF-8">
-<title>ZIP ⇄ EPUB Converter (R1)</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- Bootstrap 5 -->
+<meta charset="utf-8">
+<title>ZIP ⇄ EPUB Converter (R2)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<!-- JS libs -->
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <style>
-html,body,#dz{height:100%}
-body{padding-top:3rem}
+html,body,#dz{height:100%}body{padding-top:3rem}
 #dz{border:3px dashed #0d6efd;display:flex;align-items:center;justify-content:center;opacity:0;transition:.25s}
 #dz.active{opacity:.15}
 </style>
 </head>
 <body class="bg-light">
 <div class="container">
-  <h1 class="text-center mb-4">ZIP&nbsp;⇄&nbsp;EPUB Converter</h1>
+  <h1 class="text-center mb-4">ZIP ⇄ EPUB Converter</h1>
 
-  <!-- Dark-mode toggle -->
+  <!-- Dark-mode -->
   <div class="form-check form-switch mb-3 float-end">
     <input class="form-check-input" type="checkbox" id="darkSwitch">
     <label class="form-check-label" for="darkSwitch">Dark</label>
   </div>
 
-  <!-- Mode selector -->
+  <!-- Mode -->
   <div class="text-center mb-4">
     <div class="btn-group" role="group">
-      <input type="radio" class="btn-check" name="mode" id="modeZip2Epub" autocomplete="off" checked>
+      <input type="radio" class="btn-check" name="mode" id="modeZip2Epub" checked>
       <label class="btn btn-outline-primary" for="modeZip2Epub">ZIP → EPUB</label>
-      <input type="radio" class="btn-check" name="mode" id="modeEpub2Zip" autocomplete="off">
+      <input type="radio" class="btn-check" name="mode" id="modeEpub2Zip">
       <label class="btn btn-outline-primary" for="modeEpub2Zip">EPUB → ZIP</label>
     </div>
   </div>
 
-  <!-- ==== ZIP → EPUB panel ==== -->
+  <!-- ZIP → EPUB -->
   <form id="formZip2Epub" novalidate>
-  <div id="panelZip2Epub">
-    <div class="card mb-3">
-      <div class="card-body row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Book Title *</label>
-          <input id="bookTitle" class="form-control" required>
-          <div class="invalid-feedback">Required.</div>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Author</label>
-          <input id="bookAuthor" class="form-control">
-        </div>
-        <div class="col-12">
-          <label class="form-label">Description</label>
-          <textarea id="bookDesc" rows="3" class="form-control"></textarea>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Cover Image (optional)</label>
-          <input id="coverFile" type="file" accept="image/*" class="form-control">
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Chapters ZIP (.zip) *</label>
-          <input id="zipFile" type="file" accept=".zip" class="form-control" required>
-          <div class="invalid-feedback">Select a ZIP.</div>
+    <div id="panelZip2Epub">
+      <div class="card mb-3">
+        <div class="card-body row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Book Title *</label>
+            <input id="bookTitle" class="form-control" required>
+            <div class="invalid-feedback">Required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Author</label>
+            <input id="bookAuthor" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea id="bookDesc" rows="3" class="form-control"></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cover Image (optional)</label>
+            <input id="coverFile" type="file" accept="image/*" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Chapters ZIP (.zip) *</label>
+            <input id="zipFile" type="file" accept=".zip" class="form-control" required>
+            <div class="invalid-feedback">Select a ZIP.</div>
+          </div>
         </div>
       </div>
+      <button id="createEpubBtn" class="btn btn-primary w-100 mb-3">Create EPUB</button>
     </div>
-    <button id="createEpubBtn" class="btn btn-primary w-100 mb-3">Create EPUB</button>
-  </div>
   </form>
 
-  <!-- ==== EPUB → ZIP panel ==== -->
+  <!-- EPUB → ZIP -->
   <form id="formEpub2Zip" novalidate style="display:none">
-  <div id="panelEpub2Zip">
-    <div class="card mb-3">
-      <div class="card-body">
-        <label class="form-label">EPUB file *</label>
-        <input id="epubFile" type="file" accept=".epub" class="form-control mb-3" required>
-        <div class="invalid-feedback">Select an EPUB.</div>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="titleFilenames">
-          <label class="form-check-label" for="titleFilenames">Use chapter titles as TXT filenames</label>
+    <div id="panelEpub2Zip">
+      <div class="card mb-3">
+        <div class="card-body">
+          <label class="form-label">EPUB file *</label>
+          <input id="epubFile" type="file" accept=".epub" class="form-control mb-3" required>
+          <div class="invalid-feedback">Select an EPUB.</div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="titleFilenames">
+            <label class="form-check-label" for="titleFilenames">Use chapter titles as TXT filenames</label>
+          </div>
         </div>
       </div>
+      <button id="extractZipBtn" class="btn btn-primary w-100 mb-3">Extract to ZIP</button>
     </div>
-    <button id="extractZipBtn" class="btn btn-primary w-100 mb-3">Extract to ZIP</button>
-  </div>
   </form>
 
-  <!-- progress -->
+  <!-- Progress -->
   <div class="progress my-3" style="height:1.3rem;display:none">
-    <div id="bar" class="progress-bar progress-bar-striped progress-bar-animated"
-         role="progressbar" style="width:0%"></div>
+    <div id="bar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div>
   </div>
 </div>
 
-<!-- full-page drag-drop overlay -->
 <div id="dz" aria-label="Drop files here" tabindex="0" role="button">Drop files to load</div>
 
 <script>
-/* ---------- UI helpers ---------- */
-const qs = s => document.querySelector(s);
-const qsa = s => document.querySelectorAll(s);
-const bar = qs('#bar');
-const pg  = bar.parentElement;
-const dz  = qs('#dz');
-const show = (el, yes)=>{ el.style.display = yes ? '' : 'none'; };
-const setBar = pct => { bar.style.width = pct; };
+/* === helpers === */
+const $   = s=>document.querySelector(s);
+const $$  = s=>document.querySelectorAll(s);
+const bar = $('#bar'), pg = bar.parentElement, dz=$('#dz');
+const setBar = pct=>bar.style.width=pct;
+const show = (el,yes)=>{el.style.display=yes?'':'none'};
+const store=(k,v)=>localStorage.setItem(k,v);
+const load = k   =>localStorage.getItem(k)||'';
 const naturalSort=(a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
-const store = (k,v)=>localStorage.setItem(k,v);
-const load  = k   =>localStorage.getItem(k)||'';
 
-/* ---------- theme ---------- */
-const darkSwitch = qs('#darkSwitch');
-darkSwitch.checked = load('theme')==='dark';
-document.documentElement.dataset.bsTheme = darkSwitch.checked?'dark':'light';
-darkSwitch.addEventListener('change',()=>{
-  const t = darkSwitch.checked?'dark':'light';
-  document.documentElement.dataset.bsTheme = t; store('theme',t);
+/* theme */
+$('#darkSwitch').checked=load('theme')==='dark';
+document.documentElement.dataset.bsTheme=$('#darkSwitch').checked?'dark':'light';
+$('#darkSwitch').addEventListener('change',e=>{
+  const t=e.target.checked?'dark':'light';
+  document.documentElement.dataset.bsTheme=t;store('theme',t);
 });
 
-/* ---------- mode toggle ---------- */
+/* mode */
 function toggleMode(){
-  const zip2epub = qs('#modeZip2Epub').checked;
-  show(qs('#panelZip2Epub'), zip2epub);
-  show(qs('#panelEpub2Zip'), !zip2epub);
-  store('mode', zip2epub?'zip2epub':'epub2zip');
+  const z2e=$('#modeZip2Epub').checked;
+  show($('#panelZip2Epub'),z2e); show($('#panelEpub2Zip'),!z2e);
+  store('mode',z2e?'zip2epub':'epub2zip');
 }
-qsa('input[name="mode"]').forEach(r=>r.addEventListener('change',toggleMode));
-if(load('mode')==='epub2zip'){ qs('#modeEpub2Zip').checked = true; toggleMode(); }
+$$('input[name="mode"]').forEach(r=>r.addEventListener('change',toggleMode));
+if(load('mode')==='epub2zip'){ $('#modeEpub2Zip').checked=true;toggleMode(); }
 
-/* ---------- remember metadata ---------- */
+/* remember metadata */
 ['bookTitle','bookAuthor','bookDesc'].forEach(id=>{
-  qs('#'+id).value = load(id);
-  qs('#'+id).addEventListener('input',e=>store(id,e.target.value));
+  $('#'+id).value=load(id);
+  $('#'+id).addEventListener('input',e=>store(id,e.target.value));
 });
 
-/* ---------- drag-and-drop ---------- */
+/* drag-drop */
 ['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{
-  e.preventDefault(); dz.classList.add('active');
+  e.preventDefault();dz.classList.add('active');
 }));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{
-  e.preventDefault(); if(ev==='drop'){dz.classList.remove('active');}
+  e.preventDefault();if(ev==='drop')dz.classList.remove('active');
 }));
 document.addEventListener('drop',e=>{
-  const f = e.dataTransfer.files[0]; if(!f)return;
-  if(f.name.endsWith('.zip')) qs('#zipFile').files = e.dataTransfer.files;
-  else if(f.name.endsWith('.epub')) qs('#epubFile').files = e.dataTransfer.files;
+  const f=e.dataTransfer.files[0];if(!f)return;
+  if(f.name.endsWith('.zip')) $('#zipFile').files=e.dataTransfer.files;
+  else if(f.name.endsWith('.epub')) $('#epubFile').files=e.dataTransfer.files;
 });
 
-/* ---------- EPUB builder ---------- */
-async function buildEPUB(meta,chapters,coverBlob){
-  const zip=new JSZip();
-  zip.file('mimetype','application/epub+zip',{compression:'STORE'});
+/* txt extractor */
+const txtFromXhtml = xhtml =>
+  xhtml.replace(/<p[^>]*>/gi,'')
+       .replace(/<\/p>/gi,'\n')
+       .replace(/<br ?\/?>/gi,'\n')
+       .replace(/<[^>]+>/g,'')
+       .replace(/\r?\n\s*\r?\n/g,'\n')
+       .trim();
+
+/* ==== EPUB builder with TOC ==== */
+async function buildEPUB(meta,chapters,cover){
+  const zip=new JSZip(); zip.file('mimetype','application/epub+zip',{compression:'STORE'});
   zip.folder('META-INF').file('container.xml',
 `<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -159,25 +158,45 @@ async function buildEPUB(meta,chapters,coverBlob){
 </container>`);
   const oebps=zip.folder('OEBPS');
   oebps.file('style.css','body{font-family:serif;line-height:1.4;margin:5%;}');
-  const manifest=[],spine=[];
-  let i=1;
+  const manifest=[],spine=[],tocNav=[],tocNcx=[];
+  let idx=1;
   for(const ch of chapters){
-    const id=`c${i++}`;
-    oebps.file(`${id}.xhtml`,
+    const id=`c${idx}`,file=`${id}.xhtml`;
+    oebps.file(file,
 `<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><title>${ch.title}</title><link rel="stylesheet" href="style.css"/></head>
 <body><h2>${ch.title}</h2>
-${ch.paragraphs.map(p=>`<p>${p}<br/></p>`).join('\n')}
+${ch.paragraphs.map(p=>`<p>${p.normalize('NFC')}<br/></p>`).join('\n')}
 </body></html>`);
-    manifest.push({id,href:`${id}.xhtml`,type:'application/xhtml+xml'});
+    manifest.push({id,href:file,type:'application/xhtml+xml'});
     spine.push(id);
+    tocNav.push(`<li><a href="${file}">${ch.title}</a></li>`);
+    tocNcx.push(`<navPoint id="nav${idx}" playOrder="${idx}"><navLabel><text>${ch.title}</text></navLabel><content src="${file}"/></navPoint>`);
+    idx++;
   }
-  if(coverBlob){
-    oebps.file('cover.jpg',coverBlob);
-    manifest.push({id:'cover',href:'cover.jpg',type:coverBlob.type});
+  if(cover){
+    oebps.file('cover.jpg',cover);
+    manifest.push({id:'cover',href:'cover.jpg',type:cover.type});
   }
+  /* nav.xhtml */
+  oebps.file('nav.xhtml',
+`<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>Table of Contents</title></head>
+<body><nav epub:type="toc"><h1>Contents</h1><ol>${tocNav.join('')}</ol></nav></body></html>`);
+  manifest.push({id:'nav',href:'nav.xhtml',type:'application/xhtml+xml',prop:'nav'});
+  /* toc.ncx */
+  oebps.file('toc.ncx',
+`<?xml version="1.0" encoding="utf-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+<head><meta name="dtb:uid" content="uid"/></head>
+<docTitle><text>${meta.title}</text></docTitle>
+<navMap>${tocNcx.join('')}</navMap></ncx>`);
+  manifest.push({id:'ncx',href:'toc.ncx',type:'application/x-dtbncx+xml'});
+  /* package.opf */
   const today=new Date().toISOString().split('T')[0];
   oebps.file('package.opf',
 `<?xml version="1.0"?>
@@ -188,30 +207,20 @@ ${ch.paragraphs.map(p=>`<p>${p}<br/></p>`).join('\n')}
   ${meta.author?`<dc:creator>${meta.author}</dc:creator>`:''}
   ${meta.desc?`<dc:description>${meta.desc}</dc:description>`:''}
   <dc:date>${today}</dc:date>
+  ${cover?'<meta name="cover" content="cover"/>' : ''}
  </metadata>
  <manifest>
-  ${manifest.map(m=>`<item id="${m.id}" href="${m.href}" media-type="${m.type}"/>`).join('\n  ')}
+  ${manifest.map(m=>`<item id="${m.id}" href="${m.href}" media-type="${m.type}"${m.prop?' properties="'+m.prop+'"' : ''}/>`).join('\n  ')}
   <item id="css" href="style.css" media-type="text/css"/>
  </manifest>
- <spine>${spine.map(id=>`<itemref idref="${id}"/>`).join('')}</spine>
+ <spine toc="ncx">${spine.map(id=>`<itemref idref="${id}"/>`).join('')}</spine>
 </package>`);
-  return zip.generateAsync({type:'blob',mimeType:'application/epub+zip',
-    streamFiles:true});
+  return zip.generateAsync({type:'blob',mimeType:'application/epub+zip',streamFiles:true});
 }
 
-/* ---------- TXT extractor helper ---------- */
-function txtFromXhtml(xhtml){
-  return xhtml.replace(/<p[^>]*>/gi,'')
-              .replace(/<\/p>/gi,'\n')
-              .replace(/<br ?\/?>/gi,'\n')
-              .replace(/<[^>]+>/g,'')
-              .replace(/\r?\n\s*\r?\n/g,'\n')
-              .trim();
-}
-
-/* ---------- EPUB → ZIP ---------- */
+/* ==== EPUB → ZIP (unchanged from R1) ==== */
 async function epubToZip(epubBlob,useTitles){
-  setBar('25%');
+  setBar('20%');
   const inZip=await JSZip.loadAsync(epubBlob);
   const container=await inZip.file('META-INF/container.xml').async('string');
   const opfPath=container.match(/full-path="([^"]+)"/)[1];
@@ -232,54 +241,46 @@ async function epubToZip(epubBlob,useTitles){
       : String(n).padStart(3,'0');
     out.file(`${fname}.txt`,txt); n++;
   }
-  setBar('75%');
+  setBar('90%');
   out.file('metadata.txt',`Extracted ${n-1} chapter(s).`);
   return out.generateAsync({type:'blob'});
 }
 
-/* ---------- ZIP → EPUB click ---------- */
-qs('#createEpubBtn').addEventListener('click',async e=>{
-  e.preventDefault();
-  const form=qs('#formZip2Epub');
+/* ZIP → EPUB click */
+$('#createEpubBtn').addEventListener('click',async e=>{
+  e.preventDefault();const form=$('#formZip2Epub');
   if(!form.checkValidity()){form.classList.add('was-validated');return;}
-  const title=qs('#bookTitle').value.trim();
-  const zipFile=qs('#zipFile').files[0];
-  pg.style.display='block'; setBar('10%');
+  const title=$('#bookTitle').value.trim(), zipFile=$('#zipFile').files[0];
+  pg.style.display='block'; setBar('5%');
   try{
-    const zip=await JSZip.loadAsync(zipFile);
-    const txts=Object.values(zip.files)
-      .filter(f=>!f.dir&&/\.txt$/i.test(f.name)).sort(naturalSort);
+    const zip=await JSZip.loadAsync(zipFile); setBar('20%');
+    const txts=Object.values(zip.files).filter(f=>!f.dir&&/\.txt$/i.test(f.name)).sort(naturalSort);
     if(!txts.length) throw Error('ZIP has no .txt files');
-    setBar('30%');
     const chapters=[];
     for(const f of txts){
-      const lines=(await f.async('string')).split(/\r?\n/)
-                   .map(l=>l.trim()).filter(Boolean);
-      chapters.push({title:f.name.replace(/\.txt$/i,''), paragraphs:lines});
+      const lines=(await f.async('string')).split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+      chapters.push({title:f.name.replace(/\.txt$/i,''),paragraphs:lines});
     }
-    setBar('60%');
+    setBar('50%');
     const epub=await buildEPUB(
-      {title,author:qs('#bookAuthor').value.trim(),desc:qs('#bookDesc').value.trim()},
-      chapters, qs('#coverFile').files[0]||null);
-    setBar('100%');
-    saveAs(epub,`${title.replace(/\s+/g,'_')}.epub`);
+      {title,author:$('#bookAuthor').value.trim(),desc:$('#bookDesc').value.trim()},
+      chapters,$('#coverFile').files[0]||null);
+    setBar('100%'); saveAs(epub,`${title.replace(/\s+/g,'_')}.epub`);
   }catch(err){alert(err.message);}
-  finally{setTimeout(()=>{pg.style.display='none';setBar('0%');},500);}
+  finally{setTimeout(()=>{pg.style.display='none';setBar('0%');},600);}
 });
 
-/* ---------- EPUB → ZIP click ---------- */
-qs('#extractZipBtn').addEventListener('click',async e=>{
-  e.preventDefault();
-  const form=qs('#formEpub2Zip');
+/* EPUB → ZIP click */
+$('#extractZipBtn').addEventListener('click',async e=>{
+  e.preventDefault();const form=$('#formEpub2Zip');
   if(!form.checkValidity()){form.classList.add('was-validated');return;}
-  const epub=qs('#epubFile').files[0];
-  pg.style.display='block'; setBar('10%');
+  const epub=$('#epubFile').files[0];
+  pg.style.display='block'; setBar('5%');
   try{
-    const blob=await epubToZip(epub, qs('#titleFilenames').checked);
-    setBar('100%');
-    saveAs(blob,'chapters.zip');
+    const blob=await epubToZip(epub,$('#titleFilenames').checked);
+    setBar('100%'); saveAs(blob,'chapters.zip');
   }catch(err){alert(err.message);}
-  finally{setTimeout(()=>{pg.style.display='none';setBar('0%');},500);}
+  finally{setTimeout(()=>{pg.style.display='none';setBar('0%');},600);}
 });
 </script>
 </body>
